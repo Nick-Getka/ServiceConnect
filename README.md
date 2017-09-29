@@ -19,10 +19,33 @@ POSTGRES_PASSWORD=<database_password>
 .appenv
 ```
 DATABASE_HOST=<dataase url>
+TWILIO_SID=<SID>
+TWILIO_AUTH=<AUTH>
 ENV=<indicate production or development>
 ```
-Finally as superuser use the command:
+### Running with Docker
+As superuser use the command:
 ```
 docker-compose up --build
 ```
 The service should now be running
+### Running without Docker
+To run the serice without Docker is possible although not suggested.  First a Postgres database needs to be running at the specified DATABASE_HOST, then an virtualenv needs to setup I use virtualenvwrapper
+```
+mkvirtualenv ServiceConnect
+```
+Then install the required packages using:
+```
+pip install -r requirements.txt
+```
+The environment variable from appenv need to be set on the local enviroment (Note: the variables will persist after the virtualenv is deactivated):
+```
+DATABASE_HOST=<dataase url>
+TWILIO_SID=<SID>
+TWILIO_AUTH=<AUTH>
+ENV=<indicate production or development>
+```
+The server is now ready to be run locally using while in the project root:
+```
+python3 run.py
+```
