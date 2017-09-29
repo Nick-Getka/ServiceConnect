@@ -40,10 +40,14 @@ pip install -r requirements.txt
 ```
 The environment variable from appenv need to be set on the local enviroment (Note: the variables will persist after the virtualenv is deactivated):
 ```
-DATABASE_HOST=<dataase url>
-TWILIO_SID=<SID>
-TWILIO_AUTH=<AUTH>
-ENV=<indicate production or development>
+export DATABASE_HOST=<dataase url>
+export TWILIO_SID=<SID>
+export TWILIO_AUTH=<AUTH>
+export TWILIO_NUM=<Twilio Number>
+export TWILIO_SID_TEST=<TEST SID>
+export TWILIO_AUTH_TEST=<TEST AUTH>
+export TWILIO_NUM_TEST=<TEST Number>
+export ENV=<indicate production or development>
 ```
 The server is now ready to be run locally using while in the project root:
 ```
