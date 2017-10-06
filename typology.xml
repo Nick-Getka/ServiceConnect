@@ -1,36 +1,29 @@
 <typology>
   <top_level name="food">
-    <bottom_level name="emergency food">
+    <bottom_level name="emergency food" data="Emergency Food Temp Data">
       Emergency Food
-      <data>Emergency Food Temp Data</data>
     </bottom_level>
-    <bottom_level name="food pantry">
+    <bottom_level name="food pantry" data="Food Pantry Temp Data">
       Food Pantry
-      <data>Food Pantry Temp Data</data>
     </bottom_level>
-    <bottom_level name="free meals">
+    <bottom_level name="free meals" data="Free Meals Temp Data">
       Free Meals
-      <data>Free Meals Temp Data</data>
     </bottom_level>
   </top_level>
   <top_level name="legal">
-    <bottom_level name="legal aid">
+    <bottom_level name="legal aid" data="Legal Temp Data">
       Legal Aid
-      <data>Legal Temp Data</data>
     </bottom_level>
-    <bottom_level name="government programs">
+    <bottom_level name="government programs" data="Government Programs Temp Data">
       Government Programs
-      <data>Government Programs Temp Data</data>
     </bottom_level>
   </top_level>
   <top_level name="medical">
-    <bottom_level name="mental health">
+    <bottom_level name="mental health" data="Mental Health Temp Data">
       Mental Health
-      <data>Mental Health Temp Data</data>
     </bottom_level>
-    <bottom_level name="primary care">
+    <bottom_level name="primary care" data="Primary Care Temp Data">
       Primary Care
-      <data>Primary Care Temp Data</data>
     </bottom_level>
   </top_level>
 </typology>

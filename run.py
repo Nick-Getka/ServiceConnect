@@ -3,8 +3,11 @@ import threading
 import config
 import re
 import random
+import schedule
+import time
 import xml.etree.ElementTree as et
 from models import User
+from threading import Thread
 from flask import Flask, request, session
 from flask_sqlalchemy import SQLAlchemy
 from twilio.rest import Client
@@ -35,6 +38,7 @@ def _isRegistered(from_num) :
                 .scalar() is not None
 
 def _register(from_num, zip_code):
+    ret = { 'message': "Standin", 'cookies': None }
     valid_zip = [20001, 20002, 20003, 20004, 20005, 20006, 20007, 20008, 20009, \
                  20010, 20011, 20012, 20015, 20016, 20017, 20018, 20019, 20020, \
                  20024, 20032, 20036, 20037, 20045, 20052, 20053, 20057, 20064, \
@@ -42,7 +46,6 @@ def _register(from_num, zip_code):
                  20319, 20373, 20390, 20405, 20418, 20427, 20506, 20510, 20520, \
                  20535, 20540, 20551, 20553, 20560, 20565, 20566, 20593]
     zipc = re.findall(r'(\b\d{5}\b)', zip_code)
-    ret = { 'message': "Standin", 'cookies': None }
     if len(zipc) == 0 :
         ret['message'] = "Invalid Zip Code, please try again!"
         ret['cookies'] = {'lastText': 'notRegistered'}
@@ -83,7 +86,7 @@ def _processInitialQuery(query):
             'initialQuery': query
         }
     return ret
-def _processSubQuery(query, cookies):
+def _processSubQuery(from_num, query, cookies):
     root = typology.getroot()
     ret = {
             'message': "No Information found on {}".format(query),
@@ -96,20 +99,34 @@ def _processSubQuery(query, cookies):
                 if sub.get('name') == query:
                     target = sub
     if sub is not None :
-        ret['message'] = "For more information on {} see {}".format(query, sub.find('data').text)
+        user = db.session.query(User).filter_by(phone_num=from_num).scalar()
+        ret['message'] = "For more information on {} at zip code {} see {}".format(query, user.zip_code, target.get('data'))
         ret['cookies'] = None
+        if user.reminder :
+            if cookies.get('initialQuery') == 'food':
+                user.food_reminder = False
+            elif cookies.get('initialQuery') == 'legal':
+                user.legal_reminder = False
+            elif cookies.get('initialQuery') == 'medical':
+                user.medical_reminder = False
+        db.session.commit()
     return ret
 
-def _cancel():
-    return {
-                'message': "Standin",
-                'cookies': None
-            }
-def _comfirmCancel():
-    return {
-                'message': "Standin",
-                'cookies': None
-            }
+def _comfirmCancel(from_num, query):
+    user = db.session.query(User).filter_by(phone_num=from_num).scalar()
+    if str(user.zip_code) == query :
+        db.session.delete(user)
+        ret = {
+                    'message': "Your text food account has been cancelled",
+                    'cookies': None
+                }
+    else :
+        ret = {
+                    'message': "Incorrect zip code your account has not been cancelled",
+                    'cookies': None
+                }
+    db.session.commit()
+    return ret
 
 def processText(from_num, query, cookies):
     query = query.lower()
@@ -119,7 +136,13 @@ def processText(from_num, query, cookies):
     ret = {'message': "Default Message", 'cookies': None}
     if cookies is None :
         if _isRegistered(from_num) :
-            ret = _processInitialQuery(query)
+            if query == "stopt" :
+                ret = {
+                    'message': "To confirm cancel please text your zip code",
+                    'cookies': {'lastText': 'cancel'}
+                }
+            else :
+                ret = _processInitialQuery(query)
         else :
             ret = {
                 'message': "Welcome to TextFood! To register and start using the TextFood service please text your home zip code",
@@ -129,15 +152,12 @@ def processText(from_num, query, cookies):
         if cookies.get('lastText') == 'notRegistered':
             ret = _register(from_num, query)
         elif cookies.get('lastText') == 'initialQuery':
-            ret = _processSubQuery(query, cookies)
+            ret = _processSubQuery(from_num, query, cookies)
         elif cookies.get('lastText') == 'cancel':
-            ret = _comfirmCancel()
+            ret = _comfirmCancel(from_num, query)
         else :
             ret = {'message': "ERROR", 'cookies': None}
     return ret
-
-
-
 
 #Flask Routes
 @app.route('/', methods=['POST'])
@@ -154,9 +174,44 @@ def sms():
     resp.message(respText)
     return str(resp)
 
+def send_reminder():
+    with app.app_context():
+        for user in db.session.query(User).filter_by(active=True):
+            mess = "Thank you for using textFood! Remember you can text us any \
+                    time for information on helpful services nearby!"
+            if user.reminder:
+                if user.food_reminder:
+                    mess += "\n You can text food for infomation on emergency \
+                                food, food pantries, and free meals"
+                if user.legal_reminder:
+                    mess += "\n You can text legal for infomation on legal aid \
+                                and Government Programs"
+                if user.medical_reminder:
+                    mess += "\n You can text medical for infomation on mental \
+                                health and primary care"
+                client.messages.create(
+                    to = "+1"+user.phone_num,
+                    from_ = os.environ.get('TWILIO_NUM'),
+                    body = mess
+                )
+                user.food_reminder = True
+                user.legal_reminder = True
+                user.medical_reminder = True
+
+def schedule_start():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+
+
 
 if __name__ == '__main__':
     db.init_app(app)
     with app.app_context():
         db.create_all()
+    schedule.every().sunday.at("12:00").do(send_reminder)
+    # schedule.every(10).seconds.do(send_reminder)
+    t = Thread(target=schedule_start)
+    t.start()
     app.run(host='0.0.0.0')

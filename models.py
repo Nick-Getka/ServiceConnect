@@ -14,7 +14,7 @@ class User(db.Model):
     reminder = db.Column(db.Boolean)
     food_reminder = db.Column(db.Boolean)
     legal_reminder = db.Column(db.Boolean)
-    money_reminder = db.Column(db.Boolean)
+    medical_reminder = db.Column(db.Boolean)
 
     def __init__(self, phone_num, zip_code, reminder):
         self.phone_num = phone_num
@@ -23,4 +23,4 @@ class User(db.Model):
         self.reminder = reminder
         self.food_reminder = True
         self.legal_reminder = True
-        self.money_reminder = True
+        self.medical_reminder = True
