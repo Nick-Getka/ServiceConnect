@@ -13,6 +13,7 @@ from flask_sqlalchemy import SQLAlchemy
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse, Message
 
+#Hello!!!
 
 
 #Instantiating Flask
@@ -197,6 +198,7 @@ def send_reminder():
                 user.food_reminder = True
                 user.legal_reminder = True
                 user.medical_reminder = True
+                db.session.commit()
 
 def schedule_start():
     while True:
@@ -211,7 +213,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     schedule.every().sunday.at("12:00").do(send_reminder)
-    # schedule.every(10).seconds.do(send_reminder)
+    #schedule.every(10).seconds.do(send_reminder)
     t = Thread(target=schedule_start)
     t.start()
     app.run(host='0.0.0.0')
