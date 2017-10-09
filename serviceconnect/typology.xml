@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<typology>
+  <category name="food">
+    <service name="emergency food">
+      Emergency Food Description
+      <data>Emergency Food Temp Data</data>
+    </service>
+    <service name="food pantry">
+      Food Pantry Description
+      <data>Food Pantry Temp Data</data>
+    </service>
+    <service name="free meals">
+      Free Meals Description
+      <data>Free Meals Temp Data</data>
+    </service>
+  </category>
+  <category name="legal">
+    <service name="legal aid">
+      Legal Aid Description
+      <data>Legal Temp Data</data>
+    </service>
+    <service name="government programs">
+      Government Programs Description
+      <data>Government Programs Temp Data</data>
+    </service>
+  </category>
+  <category name="medical">
+    <service name="mental health">
+      Mental Health Description
+      <data>Mental Health Temp Data</data>
+    </service>
+    <service name="primary care">
+      Primary Care Description
+      <data>Primary Care Temp Data</data>
+    </service>
+  </category>
+</typology>

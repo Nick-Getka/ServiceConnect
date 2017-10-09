@@ -52,4 +52,4 @@ export ENV=<indicate production or development>
 The server is now ready to be run locally using while in the project root:
 ```
 python3 run.py
-```x
+```

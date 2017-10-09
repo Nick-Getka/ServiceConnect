@@ -1,6 +1,5 @@
 # apps.members.models
 from flask_sqlalchemy import SQLAlchemy
-
 db = SQLAlchemy()
 
 #User table used to store user data including phone, zip and reminder settings
