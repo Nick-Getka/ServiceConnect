@@ -13,7 +13,6 @@ from flask_sqlalchemy import SQLAlchemy
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse, Message
 
-#Hello!!!
 
 
 #Instantiating Flask
@@ -33,12 +32,18 @@ client = Client(conf.SID, conf.AUTH)
 typology = et.parse('typology.xml')
 
 
-
+#Registration
 def _isRegistered(from_num) :
+    """isRegistered Tests to see if the number has been previously registered \
+    to the ServiceConnect service by testing to see if the number exists in \
+    the database"""
     return db.session.query(User.phone_num).filter_by(phone_num=from_num)\
                 .scalar() is not None
 
 def _register(from_num, zip_code):
+    """_register registers a user to the service by creating a new record in \
+    the database using the user's phone number and zip code.  It also validates \
+    the zip code and sets the reminder settings for the user"""
     ret = { 'message': "Standin", 'cookies': None }
     valid_zip = [20001, 20002, 20003, 20004, 20005, 20006, 20007, 20008, 20009, \
                  20010, 20011, 20012, 20015, 20016, 20017, 20018, 20019, 20020, \
@@ -63,6 +68,9 @@ def _register(from_num, zip_code):
         ret['message'] = "{} at zip code {} is now registered to the textFood service".format(from_num, zipc[0])
     return ret
 
+#Direct Query Processing
+def _processQuery(prevQuery, query):
+    return
 def _processInitialQuery(query):
     ret = {
             'message': "No Information found on {}".format(query),
@@ -113,7 +121,11 @@ def _processSubQuery(from_num, query, cookies):
         db.session.commit()
     return ret
 
+
+#Cancellation
 def _comfirmCancel(from_num, query):
+    """_comfirmCancel deletes the user from the database after validating the \
+    the users zip code""""
     user = db.session.query(User).filter_by(phone_num=from_num).scalar()
     if str(user.zip_code) == query :
         db.session.delete(user)
@@ -129,7 +141,11 @@ def _comfirmCancel(from_num, query):
     db.session.commit()
     return ret
 
+#Process Text
 def processText(from_num, query, cookies):
+    """processText acts as the hub for the texts directing them to the \
+    appropriate funtion based on previous texts which are stored in session \
+    cookies"""
     query = query.lower()
     if query == "clear":
         return {'message': "Clearing", 'cookies': None}
@@ -175,7 +191,11 @@ def sms():
     resp.message(respText)
     return str(resp)
 
+
+
+#Scheduled Reminders
 def send_reminder():
+    """Sends the users the appropriate reminders via sms"""
     with app.app_context():
         for user in db.session.query(User).filter_by(active=True):
             mess = "Thank you for using textFood! Remember you can text us any \
@@ -199,7 +219,6 @@ def send_reminder():
                 user.legal_reminder = True
                 user.medical_reminder = True
                 db.session.commit()
-
 def schedule_start():
     while True:
         schedule.run_pending()
