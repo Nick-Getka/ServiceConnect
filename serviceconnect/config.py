@@ -4,8 +4,6 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config(object):
     SECRET_KEY = 'practice1234'
-    DEBUG = False
-    Testing = False
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = 'postgresql://'+\
                 os.environ.get("POSTGRES_USER")+':'+\
@@ -20,7 +18,7 @@ class ProductionConfig(Config):
     AUTH = os.environ.get("TWILIO_AUTH")
     FROM = os.environ.get("TWILIO_NUM")
 
-class DevelopmentConfig(Config):
+class TestingConfig(Config):
     DEBUG = True
     SID = os.environ.get("TWILIO_SID_TEST")
     AUTH = os.environ.get("TWILIO_AUTH_TEST")

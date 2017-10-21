@@ -96,7 +96,7 @@ def _processQuery(from_num, query, original):
             'cookies': None
             }
 
-    if re.match(r'stopt', query):
+    if re.match(r'cancel textfood', query):
         ret = {
                 'message': "To comfirm cancellation please input your home zip code",
                 'cookies': {'lastText':'cancel'}

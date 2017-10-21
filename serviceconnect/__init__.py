@@ -1,23 +1,20 @@
-from serviceconnect.models import db
-from flask import Flask
-from threading import Thread
-from twilio.rest import Client
 import serviceconnect.config
+from serviceconnect.models import db
 import os
 import threading
 import schedule
 import time
+import logging
+from flask import Flask
+from threading import Thread
+from twilio.rest import Client
+from logging.handlers import RotatingFileHandler
 
-#Instantiating Config File
-conf=config.DevelopmentConfig
-if os.environ['ENV']=='production':
-    conf = config.ProductionConfig
+
+
 
 #Instantiating Flask
 app = Flask(__name__)
-
-#Setting up Twilio Client
-client = Client(conf.SID, conf.AUTH)
 
 #Scheduled Reminders  - Use Case 3
 def send_reminder():
@@ -50,14 +47,25 @@ def schedule_start():
         schedule.run_pending()
         time.sleep(1)
 
-def prep_app(pdb = db) :
-    schedule.every().sunday.at("12:00").do(send_reminder)
-    t = Thread(target=schedule_start)
-    t.start()
+def prep_app(environment) :
+    #Configuring the Flask App
+    conf=config.TestingConfig
+    if environment == 'PRODUCTION':
+        conf = config.ProductionConfig
+        #Start Scheduled Reminders Thread only in production
+        schedule.every().sunday.at("12:00").do(send_reminder)
+        t = Thread(target=schedule_start)
+        t.start()
     app.config.from_object(conf)
-    pdb.init_app(app)
-    with app.app_context():
-        pdb.create_all()
 
+    #Setting up Twilio Client
+    client = Client(conf.SID, conf.AUTH)
+
+    #Instantiating the SQL DB
+    db.init_app(app)
+    with app.app_context():
+        db.create_all()
+
+    #Importing Routes
     from . import views
     return app
