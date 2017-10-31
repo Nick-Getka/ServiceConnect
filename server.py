@@ -1,4 +1,4 @@
-from serviceconnect import prep_app
+from serviceconnect import prep_app;
 import os
 
 app = prep_app(os.environ['ENV'])

@@ -5,8 +5,8 @@ from serviceconnect import db, prep_app
 
 
 
-class TestServiceConnect(unittest.TestCase):
-    #Before and After Tests work 
+class Testapp(unittest.TestCase):
+    #Before and After Tests work
     @classmethod
     def setUpClass(self):
         self.app_temp = prep_app("TESTING")
@@ -38,7 +38,7 @@ class TestServiceConnect(unittest.TestCase):
                     .scalar() is not None
 
     #Unit Tests
-    def test_serviceconnect(self):
+    def test_app(self):
         typology = ElementTree.parse('serviceconnect/typology.xml')
         root = typology.getroot()
         with self.app.app_context():
