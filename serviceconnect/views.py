@@ -1,5 +1,6 @@
 import re
 import random
+import psycopg2
 import xml.etree.ElementTree as et
 from .models import User
 from flask import request, session
@@ -11,6 +12,8 @@ from . import app, db
 #Parsing Decision Tree
 typology = et.parse('serviceconnect/typology.xml')
 
+
+
 #Flask Routes
 @app.route('/', methods=['POST'])
 def sms():
@@ -19,27 +22,38 @@ def sms():
     query = cleanText(initQuery)
     cookies = session.get('cookies', None)
 
-    ret = {'message': "Default Message", 'cookies': None}
-    if cookies is not None:
-        if cookies['lastText'] == 'notRegistered':
-            ret = _register(from_num, query)
-        elif cookies['lastText'] == 'cancel' :
-            ret = _comfirmCancel(from_num, query)
-    else :
-        if _isRegistered(from_num) :
-            ret = _processQuery(from_num, query, initQuery)
+    ret = {'message': None, 'cookies': None}
+    try:
+        if cookies is not None:
+            if cookies['lastText'] == 'notRegistered':
+                ret = _register(from_num, query)
+            elif cookies['lastText'] == 'cancel' :
+                ret = _comfirmCancel(from_num, query)
         else :
-            ret = {
-                'message': "Welcome to TextFood! To register and start using \
-                            the TextFood service please text your home zip code",
-                'cookies': { 'lastText': 'notRegistered' }
-            }
+            if _isRegistered(from_num) :
+                ret = _processQuery(from_num, query, initQuery)
+            else :
+                ret = {
+                    'message': "Welcome to TextFood! To register and start using \
+                                the TextFood service please text your home zip code",
+                    'cookies': { 'lastText': 'notRegistered' }
+                }
+    except Exception as e:
+        app.logger.exception(e)
 
     session['cookies'] = ret.get('cookies')
     resp = MessagingResponse()
-    respText = ret.get('message')
-    resp.message(respText)
+
+    if ret['message'] is None:
+        app.logger.warning("{} texted {}, but the to be returned is None. An error has occured")
+        ret['message'] = "We are sorry an error has occured.  We will address the issue soon. Please try again."
+    else :
+        app.logger.info("{} texted {} recieved {}".format(from_num, query, ret['message']))
+
+    resp.message(ret.get('message'))
     return str(resp)
+
+
 
 #Misc Funtions
 def cleanText(query):
@@ -49,13 +63,18 @@ def cleanText(query):
     query = re.sub(r'[^0-9a-zA-Z]+', ' ', query)
     return query
 
+
+#Use Case Functions
 #Registration - Use Case 1
 def _isRegistered(from_num) :
     """isRegistered Tests to see if the number has been previously registered \
     to the ServiceConnect service by testing to see if the number exists in \
     the database"""
+    # try:
     return db.session.query(User.phone_num).filter_by(phone_num=from_num)\
-                .scalar() is not None
+                     .scalar() is not None
+    # except Exception as e:
+    #     raise e
 
 def _register(from_num, zip_code):
     """_register registers a user to the service by creating a new record in \
@@ -115,22 +134,13 @@ def _processQuery(from_num, query, original):
         #Composing text messessage based on requested element
         if target is not None :
             if target.tag == 'category':
-                ret['message'] = "Please text one of the following for information on the relevant sub category \n"
+                str_builder = []
+                str_builder.append("Please text one of the following for information on the relevant sub category \n")
                 for sub in target.findall('service'):
-                    ret['message'] += " {} - {} \n"\
-                                        .format(sub.get('name'), sub.text)
+                    str_builder.append(" {} - {} \n".format(sub.get('name'), sub.text))
+                ret['message'] = ''.join(str_builder)
             elif target.tag == 'service':
-                user = db.session.query(User).filter_by(phone_num=from_num)\
-                         .scalar()
                 zipc = user.zip_code
-                if user.reminder :
-                    if parent.get('name') == 'food':
-                        user.food_reminder = False
-                    elif parent.get('name') == 'legal':
-                        user.legal_reminder = False
-                    elif parent.get('name') == 'medical':
-                        user.medical_reminder = False
-                db.session.commit()
                 ret['message'] = "For more information on {} at zip code {} see {}"\
                                  .format(query, zipc, target.find("data").text)
     return ret

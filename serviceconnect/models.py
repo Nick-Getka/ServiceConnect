@@ -11,15 +11,10 @@ class User(db.Model):
     zip_code = db.Column(db.String(5), nullable=False)
     active = db.Column(db.Boolean)
     reminder = db.Column(db.Boolean)
-    food_reminder = db.Column(db.Boolean)
-    legal_reminder = db.Column(db.Boolean)
-    medical_reminder = db.Column(db.Boolean)
+
 
     def __init__(self, phone_num, zip_code, reminder):
         self.phone_num = phone_num
         self.zip_code = zip_code
         self.active = True
         self.reminder = reminder
-        self.food_reminder = True
-        self.legal_reminder = True
-        self.medical_reminder = True
