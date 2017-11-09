@@ -6,7 +6,7 @@ import schedule
 import time
 import logging
 import multiprocessing
-from logging.handlers import RotatingFileHandler
+from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from flask import Flask
 from twilio.rest import Client
 
@@ -47,14 +47,14 @@ class ReminderProcess(multiprocessing.Process):
         with app.app_context():
             for user in db.session.query(User).filter_by(active=True):
                 if user.reminder:
-                        mess = "Thank you for using textFood! Remember you can \
-                                text us anytime for information on helpful services nearby! \
-                                \n You can text food for infomation on emergency \
-                                    food, food pantries, and free meals \
-                                \n You can text legal for infomation on legal aid \
-                                    and Government Programs \
-                                \n You can text medical for infomation on mental \
-                                    health and primary care"
+                    mess = "Thank you for using textFood! Remember you can \
+                        text us anytime for information on helpful services nearby! \
+                        \n You can text food for infomation on emergency \
+                            food, food pantries, and free meals \
+                        \n You can text legal for infomation on legal aid \
+                            and Government Programs \
+                        \n You can text medical for infomation on mental \
+                            health and primary care"
                     client.messages.create(
                         to = "+1"+user.phone_num,
                         from_ = os.environ.get('TWILIO_NUM'),
@@ -92,7 +92,7 @@ def prep_app(environment) :
     app.logger.setLevel(logging.INFO)
     #Store the user data
     data_format = logging.Formatter('%(asctime)s: %(message)s')
-    data_handler = logging.FileHandler('/home/ngetka/Desktop/ServiceConnect/log/data.log','a')
+    data_handler = TimedRotatingFileHandler('/home/ngetka/Desktop/ServiceConnect/log/data.log',when='W6',backupCount=100)
     data_handler.setLevel(logging.INFO)
     data_handler.setFormatter(data_format)
     data_handler.addFilter(LevelFilter(logging.INFO))
