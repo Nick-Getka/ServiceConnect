@@ -3,6 +3,7 @@ import os
 class Config(object):
     SECRET_KEY = 'practice1234'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    AB_API_KEY=os.environ.get('AB_API_KEY')
     SQLALCHEMY_DATABASE_URI = 'postgresql://'+\
                 os.environ.get("POSTGRES_USER")+':'+\
                 os.environ.get("POSTGRES_PASSWORD")+'@'+\

@@ -6,6 +6,10 @@ import schedule
 import time
 import logging
 import multiprocessing
+import requests
+from .models import User
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from flask import Flask
 from twilio.rest import Client
@@ -32,6 +36,7 @@ class ReminderProcess(multiprocessing.Process):
     def run(self):
         try :
             while not self.exit.is_set():
+                #schedule.every(5).seconds.do(self._send_reminder)
                 schedule.every().sunday.at("12:00").do(self._send_reminder)
                 schedule.run_pending()
                 time.sleep(1)
@@ -44,26 +49,40 @@ class ReminderProcess(multiprocessing.Process):
     #Scheduled Reminders  - Use Case 3
     def _send_reminder(self):
         """Sends the users the appropriate reminders via sms"""
-        with app.app_context():
-            for user in db.session.query(User).filter_by(active=True):
-                if user.reminder:
-                    mess = "Thank you for using textFood! Remember you can \
-                        text us anytime for information on helpful services nearby! \
-                        \n You can text food for infomation on emergency \
-                            food, food pantries, and free meals \
-                        \n You can text legal for infomation on legal aid \
-                            and Government Programs \
-                        \n You can text medical for infomation on mental \
-                            health and primary care"
-                    client.messages.create(
+        try:
+            cf=config.ProductionConfig
+            c = Client(cf.SID, cf.AUTH)
+            engine = create_engine(cf.SQLALCHEMY_DATABASE_URI)
+            Session = sessionmaker(bind=engine)
+            sess = Session()
+            payload = {
+                'api_key': cf.AB_API_KEY,
+                'cookie': "ServiceConnect Weekly Reminder"
+            }
+            tax = requests.get('https://searchbertha-hrd.appspot.com/_ah/api/search_v2/v2/taxonomy/', params=payload)
+            if tax.status_code == 200:
+                str_builder = []
+                str_builder.append('Thank you for using textFood! Remember you can \
+                            text us anytime for information on helpful services nearby! \
+                             There is information available for: \n')
+                for service in tax.json().get('nodes'):
+                    str_builder.append('- {} \n'.format(service.get('label')))
+                reminder_text = ''.join(str_builder)
+                for user in sess.query(User).filter_by(reminder=True):
+                    c.messages.create(
                         to = "+1"+user.phone_num,
                         from_ = os.environ.get('TWILIO_NUM'),
-                        body = mess
+                        body = reminder_text
                     )
-                    user.food_reminder = True
-                    user.legal_reminder = True
-                    user.medical_reminder = True
-                    db.session.commit()
+                sess.commit()
+            else :
+                raise Exception('AB not responding')
+        except Exception as e:
+            c.messages.create(
+                to = "+13013009966",
+                from_ = os.environ.get('TWILIO_NUM'),
+                body = "Errror Sending weekly reminders"
+            )
 
 
 

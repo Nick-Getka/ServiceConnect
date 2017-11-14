@@ -9,12 +9,10 @@ class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
     phone_num = db.Column(db.String(10), nullable=False)
     zip_code = db.Column(db.String(5), nullable=False)
-    active = db.Column(db.Boolean)
     reminder = db.Column(db.Boolean)
 
 
     def __init__(self, phone_num, zip_code, reminder):
         self.phone_num = phone_num
         self.zip_code = zip_code
-        self.active = True
         self.reminder = reminder

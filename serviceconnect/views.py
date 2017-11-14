@@ -1,18 +1,24 @@
 import re
+import os
 import random
 import psycopg2
-import xml.etree.ElementTree as et
+import requests
 from .models import User
 from flask import request, session
 from twilio.twiml.messaging_response import MessagingResponse, Message
 from . import app, db
 
 
-
+basic_payload = {
+    'api_key': os.environ.get('AB_API_KEY'),
+    'cookie': "TestyMcTestface"
+}
 #Parsing Decision Tree
-typology = et.parse('serviceconnect/typology.xml')
-
-
+tax_available = False
+while not tax_available:
+    t = requests.get('https://searchbertha-hrd.appspot.com/_ah/api/search_v2/v2/taxonomy/', params=basic_payload)
+    tax_available = t.status_code == 200
+taxonomy = t.json().get('nodes')
 
 #Flask Routes
 @app.route('/', methods=['POST'])
@@ -62,6 +68,23 @@ def cleanText(query):
     query = query.lower()
     query = re.sub(r'[^0-9a-zA-Z]+', ' ', query)
     return query
+def inTaxonomy(query, nodes):
+    f = {
+        'found': False,
+        'children': None
+    }
+    for node in nodes:
+        if node.get('label').lower() == query:
+            f['found'] = True
+            if node.get('children') is not None:
+                f['children'] = node.get('children')
+            break
+        elif node.get('children') is not None:
+            child_f = inTaxonomy(query, node.get('children'))
+            if child_f['found']:
+                return child_f
+    return f
+
 
 
 #Use Case Functions
@@ -70,17 +93,14 @@ def _isRegistered(from_num) :
     """isRegistered Tests to see if the number has been previously registered \
     to the ServiceConnect service by testing to see if the number exists in \
     the database"""
-    # try:
     return db.session.query(User.phone_num).filter_by(phone_num=from_num)\
                      .scalar() is not None
-    # except Exception as e:
-    #     raise e
 
 def _register(from_num, zip_code):
     """_register registers a user to the service by creating a new record in \
     the database using the user's phone number and zip code.  It also validates \
     the zip code and sets the reminder settings for the user"""
-    ret = { 'message': "Standin", 'cookies': None }
+    ret = { 'message': None, 'cookies': None }
     valid_zip = [20001, 20002, 20003, 20004, 20005, 20006, 20007, 20008, 20009, \
                  20010, 20011, 20012, 20015, 20016, 20017, 20018, 20019, 20020, \
                  20024, 20032, 20036, 20037, 20045, 20052, 20053, 20057, 20064, \
@@ -121,28 +141,37 @@ def _processQuery(from_num, query, original):
                 'cookies': {'lastText':'cancel'}
                 }
     else:
-        #Searching for requested xml element
-        root = typology.getroot()
-        parent = root
-        target = None
-        for child in root.iter() :
-            if child.tag == 'category':
-                parent = child
-            if child.get('name') == query:
-                target = child
-                break
-        #Composing text messessage based on requested element
-        if target is not None :
-            if target.tag == 'category':
+        inT = inTaxonomy(query, taxonomy)
+        if inT['found']:
+            if inT['children'] is not None:
                 str_builder = []
-                str_builder.append("Please text one of the following for information on the relevant sub category \n")
-                for sub in target.findall('service'):
-                    str_builder.append(" {} - {} \n".format(sub.get('name'), sub.text))
+                str_builder.append("Please text one of the following for more specific information: \n")
+                for child in inT['children']:
+                    str_builder.append("- {} \n".format(child.get('label')))
                 ret['message'] = ''.join(str_builder)
-            elif target.tag == 'service':
-                zipc = user.zip_code
-                ret['message'] = "For more information on {} at zip code {} see {}"\
-                                 .format(query, zipc, target.find("data").text)
+            else:
+                payload = basic_payload
+                payload['serviceTag'] = query
+                user = db.session.query(User).filter_by(phone_num=from_num).scalar()
+                r = requests.get("https://searchbertha-hrd.appspot.com/_ah/api/search_v2/v2/zipcodes/"+user.zip_code+"/programs", params=payload)
+                if r.status_code == 200:
+                    ab_data = r.json()
+                    if ab_data.get('error') is None:
+                        str_builder = []
+                        programs = ab_data.get('programs')
+                        count = 0
+                        for program in programs:
+                            if count > 2:
+                                break
+                            else:
+                                count+=1
+                                str_builder.append("{} - {}: {} \n \n".format(program.get('provider_name'),program.get('next_steps')[0].get('action'),program.get('next_steps')[0].get('contact')))
+                        ret['message'] = ''.join(str_builder)
+                    else:
+                        ret['message'] = "I am sorry we do not know of a {} service in the {} zipcode".format(query, user.zip_code)
+                else:
+                    ret['message'] = "There is currently an error with the system. Please try again later."
+                    app.logger.warning("Aunt Bertha is not responding correctly")
     return ret
 
 #Cancellation - Use Case 4
